@@ -19,10 +19,11 @@
       ansible.builtin.include_role:
         name: system_init
 
-    - name: Install Docker and Ansible Docker library
+    - name: Install Docker, Compose plugin and Ansible library
       ansible.builtin.apt:
         name: 
           - docker.io
+          - docker-compose-plugin
           - python3-docker
         state: present
         update_cache: true
