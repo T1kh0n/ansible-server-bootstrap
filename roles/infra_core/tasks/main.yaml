@@ -12,6 +12,7 @@
   loop:
     - /opt/infra/traefik/config
     - /opt/infra/traefik/letsencrypt
+    - /opt/infra/traefik/dynamic
     - /opt/infra/crowdsec/data
     - /opt/infra/crowdsec/config
 
