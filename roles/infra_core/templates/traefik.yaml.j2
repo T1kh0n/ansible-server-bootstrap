@@ -14,7 +14,7 @@ entryPoints:
           scheme: https
   websecure:
     address: ":443"
-    asDefaultInRule: true
+    asDefault: true
     http:
       middlewares:
         - crowdsec-waf@docker
