@@ -2,6 +2,7 @@
 - name: Homelab Bootstrap (Static IP Setup)
   hosts: homelab
   become: true
+  gather_facts: true
   vars_files:
     - vars/hardening.yaml
 
@@ -18,6 +19,16 @@
       ansible.builtin.include_role:
         name: system_init
 
+    - name: Install Docker
+      ansible.builtin.include_role:
+        name: docker
+
+    - name: Ensure Docker service is running and enabled
+      ansible.builtin.systemd:
+        name: docker
+        state: started
+        enabled: true
+
     - name: Setup Core Infrastructure
       ansible.builtin.include_role:
         name: infra_core
@@ -28,9 +39,9 @@
           =============================================
           SYSTEM PASSWORDS GENERATED FOR HOME SERVER
           =============================================
-          User: root | Pass: {{ hostvars[inventory_hostname]['root_password'] }}
-          User: main | Pass: {{ hostvars[inventory_hostname]['main_password'] }}
-          User: sudo | Pass: {{ hostvars[inventory_hostname]['sudo_password'] }}
+          User: root | Pass: {{ hostvars[inventory_hostname]['root_password'] | default('NOT SET', true) }}
+          User: main | Pass: {{ hostvars[inventory_hostname]['main_password'] | default('NOT SET', true) }}
+          User: sudo | Pass: {{ hostvars[inventory_hostname]['sudo_password'] | default('NOT SET', true) }}
           =============================================
 
 - name: Homelab specific actions
