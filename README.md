@@ -1,22 +1,16 @@
 # ansible-server-bootstrap
 
-An Ansible playbook for quickly bootstrapping my servers.
+An Ansible playbook for bootstrapping secured Debian servers with automated core infrastructure.
 
 ## What it does:
 
-1. Installs the base packages.
-
-2. Installs and configures firewalld.
-
-3. Enables automatic security patch updates.
-
-4. Configures notifications to be sent to Pushover if a server restart is required after an update.
-
-5. Apply dev-sec os and ssh hardening.
-
-6. Installs and configures CrowdSec with nftables firewall bouncer.
-
-7. And adds a couple of additions depending on the server's role.
+1. **System Hardening:** Configures SSH on port 2222, disables root login, enforces key-based access, and generates random credentials for main/root/sudo.
+2. **OS Optimization:** Sets up `/mnt/storage`, disables sleep/hibernation, and configures scheduled reboots.
+3. **Core Infrastructure:** Deploys Docker, Traefik (Ingress), CrowdSec, and Oxker (TUI monitoring).
+4. **Zero-Touch WAF:** Integrates global CrowdSec AppSec middleware at the entrypoint level.
+5. **Secure Networking:** Creates a private `secure-network` for all microservices without exposing host ports.
+6. **Maintenance:** Enables automatic security updates and Pushover notifications for required reboots.
+7. **Base Environment:** Installs standard tools and manages firewalld policies.
 
 ## hosts.yaml example
 
@@ -37,4 +31,9 @@ all:
         example1.com:
       vars:
         pushover_app_token: "examplewewewewe"
+
 ```
+
+## Security Note
+
+The playbook includes a debug task at the end of the bootstrap process. After running `ansible-playbook bootstrap.yaml`, it will output the dynamically generated passwords for the system users directly to your terminal. Ensure your console buffer is secure.
