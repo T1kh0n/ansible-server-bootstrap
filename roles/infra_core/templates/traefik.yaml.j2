@@ -1,0 +1,28 @@
+experimental:
+  plugins:
+    crowdsec:
+      moduleName: github.com/maxmcd/traefik-crowdsec-bouncer
+      version: v0.6.0
+
+entryPoints:
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+  websecure:
+    address: ":443"
+    asDefaultInRule: true
+    http:
+      middlewares:
+        - "crowdsec-waf@file"
+
+providers:
+  docker:
+    exposedByDefault: false
+    network: secure-network
+  file:
+    directory: /etc/traefik/dynamic
+    watch: true

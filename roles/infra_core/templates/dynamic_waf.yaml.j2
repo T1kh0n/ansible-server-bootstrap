@@ -1,0 +1,9 @@
+http:
+  middlewares:
+    crowdsec-waf:
+      plugin:
+        crowdsec:
+          crowdsecLapiScheme: http
+          crowdsecLapiHost: crowdsec:8080
+          crowdsecLapiKey: "GENERATED_CROWDSEC_LAPI_KEY_HERE"
+          clientTimeout: 2s

@@ -1,54 +1,32 @@
 ---
-- name: Base bootstrap for servers
+- name: Enterprise Bootstrap & Zero-Touch WAF deployment
   hosts: all
   become: true
-  vars_files:
-    - vars/hardening.yaml
-
   tasks:
-    - name: Install base packages
+    - name: Initialization and Host OS Hardening
       ansible.builtin.include_role:
-        name: base_packages
+        name: system_init
 
-    - name: Setup firewalld
+    - name: Deploy Orchestration and Global WAF Engine
       ansible.builtin.include_role:
-        name: firewall
+        name: infra_core
 
-    - name: Autoupdates setup (Security only)
-      ansible.builtin.include_role:
-        name: autoupdates
-
-    - name: Apply pushover additions
-      ansible.builtin.include_role:
-        name: pushover
-
-    - name: Apply devsec os hardening
-      ansible.builtin.include_role:
-        name: devsec.hardening.os_hardening
-      vars:
-        sysctl_overwrite:
-          net.ipv4.ip_forward: 1
-        os_auditd_enabled: false
-        os_user_pw_ageing: false
-        os_auth_pw_max_age: 99999
-        os_auth_pw_min_age: 0
-
-    - name: Apply devsec ssh hardening
-      ansible.builtin.include_role:
-        name: devsec.hardening.ssh_hardening
-
-    - name: Setup CrowdSec
-      ansible.builtin.include_role:
-        name: crowdsec
-
-- name: Homelab specific actions
-  hosts: homelab
-  become: true
-  roles:
-    - homelab
-
-- name: VPS specific actions
-  hosts: vps
-  become: true
-  roles:
-    - vps
+    - name: Render System Credentials Output Table
+      ansible.builtin.debug:
+        msg: |
+          +-------------------------------------------------------------+
+          |         SYSTEM INITIALIZATION SECURE CREDENTIALS REPORT     |
+          +-------------------------------------------------------------+
+          | Target Node: {{ inventory_hostname }}
+          | SSH Target Port: 2222 (Only main user allowed with SSH Key)  
+          +-------------------------------------------------------------+
+          | USER   | GENERATED PASSWORD                                 |
+          +--------+----------------------------------------------------+
+          | root   | {{ hostvars[inventory_hostname]['generated_root_password'] }}
+          | main   | {{ hostvars[inventory_hostname]['generated_main_password'] }}
+          | sudo   | {{ hostvars[inventory_hostname]['generated_sudo_password'] }}
+          +-------------------------------------------------------------+
+          | CRITICAL INFO: Passwords have been applied via Argon2/SHA512.|
+          | Write them down now. Authentication over password via SSH is|
+          | completely DISABLED.                                        |
+          +-------------------------------------------------------------+

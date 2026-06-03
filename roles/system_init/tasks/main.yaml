@@ -1,0 +1,96 @@
+---
+- name: Generate and fixate random passwords (idempotent setup)
+  ansible.builtin.set_fact:
+    generated_root_password: "{{ lookup('ansible.builtin.password', '/dev/null length=24 chars=ascii_letters,digits') }}"
+    generated_main_password: "{{ lookup('ansible.builtin.password', '/dev/null length=24 chars=ascii_letters,digits') }}"
+    generated_sudo_password: "{{ lookup('ansible.builtin.password', '/dev/null length=24 chars=ascii_letters,digits') }}"
+  cacheable: yes
+  when: generated_root_password is not defined
+
+- name: Create isolated docker system group
+  ansible.builtin.group:
+    name: docker
+    state: present
+
+- name: Create main user with bash environment
+  ansible.builtin.user:
+    name: main
+    password: "{{ generated_main_password | password_hash('sha512') }}"
+    groups: sudo,docker
+    append: true
+    shell: /bin/bash
+    create_home: true
+
+- name: Secure root user password
+  ansible.builtin.user:
+    name: root
+    password: "{{ generated_root_password | password_hash('sha512') }}"
+
+- name: Strict IAM Hardening - Isolate root directories from main user
+  ansible.builtin.file:
+    path: "{{ item }}"
+    owner: root
+    group: root
+    mode: '0700'
+  loop:
+    - /root
+    - /etc/ansible
+
+- name: Disable power-saving targets (Sleep and Hibernation)
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    masked: true
+  loop:
+    - sleep.target
+    - suspend.target
+    - hibernate.target
+    - hybrid-sleep.target
+
+- name: Ensure target storage mount point directory exists
+  ansible.builtin.file:
+    path: /mnt/storage
+    state: directory
+    owner: root
+    group: root
+    mode: '0775'
+
+- name: Configure daily cron automatic reboot at 04:00
+  ansible.builtin.cron:
+    name: "Nightly system auto-reboot"
+    minute: "0"
+    hour: "4"
+    job: "/sbin/reboot"
+
+- name: Deploy SSH Authorized Keys for main user (CRITICAL SAFETY STEP)
+  ansible.posix.authorized_key:
+    user: main
+    state: present
+    key: "{{ lookup('file', '~/.ssh/id_rsa.pub', errors='ignore') | default('ssh-rsa AAAAB3NzaC1yc2E... test-key') }}"
+
+- name: Hardening OpenSSH Server daemon configuration
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    state: present
+  loop:
+    - { regexp: '^#?Port', line: 'Port 2222' }
+    - { regexp: '^#?PermitRootLogin', line: 'PermitRootLogin no' }
+    - { regexp: '^#?PasswordAuthentication', line: 'PasswordAuthentication no' }
+  notify: trigger_restart_ssh
+
+- name: Install Oxker TUI Monitor via precompiled Rust binary
+  ansible.builtin.get_url:
+    url: "https://github.com/mrjackwills/oxker/releases/latest/download/oxker-linux-x86_64.tar.gz"
+    dest: /tmp/oxker.tar.gz
+    mode: '0644'
+  register: oxker_download
+  ignore_errors: true
+
+- name: Extract Oxker binary to system bin path
+  ansible.builtin.unarchive:
+    src: /tmp/oxker.tar.gz
+    dest: /usr/local/bin/
+    remote_src: true
+    mode: '0755'
+  when: oxker_download is succeeded

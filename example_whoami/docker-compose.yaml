@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  whoami:
+    image: traefik/whoami:latest
+    container_name: test_whoami
+    restart: always
+    networks:
+      - secure-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.whoami.rule=Host(`whoami.local.yourdomain.com`)"
+      - "traefik.http.routers.whoami.entrypoints=websecure"
+      - "traefik.http.routers.whoami.tls=true"
+
+networks:
+  secure-network:
+    external: true
