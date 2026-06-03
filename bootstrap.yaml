@@ -1,32 +1,40 @@
 ---
-- name: Enterprise Bootstrap & Zero-Touch WAF deployment
-  hosts: all
+- name: Homelab Bootstrap (Static IP Setup)
+  hosts: homelab
   become: true
+  vars_files:
+    - vars/hardening.yaml
+
   tasks:
-    - name: Initialization and Host OS Hardening
+    - name: Install base packages
+      ansible.builtin.include_role:
+        name: base_packages
+
+    - name: Setup firewalld
+      ansible.builtin.include_role:
+        name: firewall
+
+    - name: System Initialization and Hardening
       ansible.builtin.include_role:
         name: system_init
 
-    - name: Deploy Orchestration and Global WAF Engine
+    - name: Setup Core Infrastructure
       ansible.builtin.include_role:
         name: infra_core
 
-    - name: Render System Credentials Output Table
+    - name: Display Generated Passwords
       ansible.builtin.debug:
         msg: |
-          +-------------------------------------------------------------+
-          |         SYSTEM INITIALIZATION SECURE CREDENTIALS REPORT     |
-          +-------------------------------------------------------------+
-          | Target Node: {{ inventory_hostname }}
-          | SSH Target Port: 2222 (Only main user allowed with SSH Key)  
-          +-------------------------------------------------------------+
-          | USER   | GENERATED PASSWORD                                 |
-          +--------+----------------------------------------------------+
-          | root   | {{ hostvars[inventory_hostname]['generated_root_password'] }}
-          | main   | {{ hostvars[inventory_hostname]['generated_main_password'] }}
-          | sudo   | {{ hostvars[inventory_hostname]['generated_sudo_password'] }}
-          +-------------------------------------------------------------+
-          | CRITICAL INFO: Passwords have been applied via Argon2/SHA512.|
-          | Write them down now. Authentication over password via SSH is|
-          | completely DISABLED.                                        |
-          +-------------------------------------------------------------+
+          =============================================
+          SYSTEM PASSWORDS GENERATED FOR HOME SERVER
+          =============================================
+          User: root | Pass: {{ hostvars[inventory_hostname]['root_password'] }}
+          User: main | Pass: {{ hostvars[inventory_hostname]['main_password'] }}
+          User: sudo | Pass: {{ hostvars[inventory_hostname]['sudo_password'] }}
+          =============================================
+
+- name: Homelab specific actions
+  hosts: homelab
+  become: true
+  roles:
+    - homelab

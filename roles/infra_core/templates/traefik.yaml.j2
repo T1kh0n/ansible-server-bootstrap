@@ -1,6 +1,6 @@
 experimental:
   plugins:
-    crowdsec:
+    bouncer:
       moduleName: github.com/maxmcd/traefik-crowdsec-bouncer
       version: v0.6.0
 
@@ -17,12 +17,19 @@ entryPoints:
     asDefaultInRule: true
     http:
       middlewares:
-        - "crowdsec-waf@file"
+        - crowdsec-waf@docker
+      tls:
+        certResolver: homeResolver
+
+certificatesResolvers:
+  homeResolver:
+    acme:
+      email: "{{ acme_email | default('admin@yourdomain.com') }}"
+      storage: "/letsencrypt/acme.json"
+      httpChallenge:
+        entryPoint: web
 
 providers:
   docker:
     exposedByDefault: false
     network: secure-network
-  file:
-    directory: /etc/traefik/dynamic
-    watch: true

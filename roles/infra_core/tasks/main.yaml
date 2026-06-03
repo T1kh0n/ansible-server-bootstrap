@@ -1,66 +1,53 @@
 ---
-- name: Verify or create core external Docker network
+- name: Ensure secure-network exists
   community.docker.docker_network:
     name: secure-network
     state: present
-    driver: bridge
 
-- name: Setup dynamic and static configuration paths for Traefik
+- name: Ensure Traefik config directory exists
   ansible.builtin.file:
-    path: "{{ item }}"
+    path: /opt/infra/traefik/config
     state: directory
     mode: '0755'
-  loop:
-    - /opt/infra/traefik/config
-    - /opt/infra/traefik/dynamic
-    - /opt/infra/crowdsec/config
 
-- name: Generate static Traefik configuration from template
+- name: Template Traefik configuration
   ansible.builtin.template:
     src: traefik.yaml.j2
     dest: /opt/infra/traefik/config/traefik.yaml
-    mode: '0644'
 
-- name: Generate dynamic Traefik middleware config (WAF definition)
-  ansible.builtin.template:
-    src: dynamic_waf.yaml.j2
-    dest: /opt/infra/traefik/dynamic/dynamic_waf.yaml
-    mode: '0644'
-
-- name: Orchestrate Core Infrastructure via Docker Compose
+- name: Deploy Core Infrastructure
   community.docker.docker_compose_v2:
     project_name: infra_core
     definition:
       services:
         traefik:
           image: traefik:v3.0
-          container_name: ingress_traefik
-          restart: always
           ports:
             - "80:80"
             - "443:443"
           volumes:
             - /var/run/docker.sock:/var/run/docker.sock:ro
             - /opt/infra/traefik/config/traefik.yaml:/etc/traefik/traefik.yaml:ro
-            - /opt/infra/traefik/dynamic:/etc/traefik/dynamic:ro
+            - /opt/infra/traefik/letsencrypt:/letsencrypt
           networks:
             - secure-network
-          environment:
-            - TZ=Europe/Moscow
-
+          labels:
+            - "traefik.http.middlewares.crowdsec-waf.plugin.bouncer.enabled=true"
         crowdsec:
           image: crowdsecurity/crowdsec:latest
-          container_name: waf_crowdsec
-          restart: always
           environment:
-            COLLECTIONS: "crowdsecurity/traefik crowdsecurity/base-httpingest"
-            DISABLE_ONLINE_API: "false"
+            COLLECTIONS: "crowdsecurity/traefik"
           volumes:
             - /var/log:/var/log:ro
-            - /opt/infra/crowdsec/config:/etc/crowdsec
           networks:
             - secure-network
-
+        oxker:
+          image: mrnugget/oxker
+          tty: true
+          volumes:
+            - /var/run/docker.sock:/var/run/docker.sock:ro
+          networks:
+            - secure-network
       networks:
         secure-network:
           external: true
