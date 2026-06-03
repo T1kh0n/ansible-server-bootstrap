@@ -34,6 +34,12 @@
         state: started
         enabled: true
 
+    - name: Add current deployment user to docker group
+      ansible.builtin.user:
+        name: "{{ ansible_user_id }}"
+        groups: docker
+        append: true
+
     - name: Setup Core Infrastructure
       ansible.builtin.include_role:
         name: infra_core
