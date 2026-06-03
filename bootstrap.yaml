@@ -19,9 +19,13 @@
       ansible.builtin.include_role:
         name: system_init
 
-    - name: Install Docker
-      ansible.builtin.include_role:
-        name: docker
+    - name: Install Docker and Ansible Docker library
+      ansible.builtin.apt:
+        name: 
+          - docker.io
+          - python3-docker
+        state: present
+        update_cache: true
 
     - name: Ensure Docker service is running and enabled
       ansible.builtin.systemd:
