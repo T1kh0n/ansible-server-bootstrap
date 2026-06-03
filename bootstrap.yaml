@@ -21,7 +21,7 @@
 
     - name: Install Docker, Compose and Ansible library
       ansible.builtin.apt:
-        name: 
+        name:
           - docker.io
           - docker-compose
           - python3-docker
@@ -40,13 +40,10 @@
         groups: docker
         append: true
 
-    - name: Setup Core Infrastructure
-      ansible.builtin.include_role:
-        name: infra_core
-
-    - name: Display Generated Passwords
-      ansible.builtin.debug:
-        msg: |
+    - name: Save Generated Passwords to Local File
+      ansible.builtin.copy:
+        dest: "./generated_passwords.txt"
+        content: |
           =============================================
           SYSTEM PASSWORDS GENERATED FOR HOME SERVER
           =============================================
@@ -54,6 +51,8 @@
           User: main | Pass: {{ hostvars[inventory_hostname]['main_password'] | default('NOT SET', true) }}
           User: sudo | Pass: {{ hostvars[inventory_hostname]['sudo_password'] | default('NOT SET', true) }}
           =============================================
+        mode: '0600'
+      delegate_to: localhost
 
 - name: Homelab specific actions
   hosts: homelab
