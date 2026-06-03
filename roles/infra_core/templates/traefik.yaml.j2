@@ -14,10 +14,7 @@ entryPoints:
           scheme: https
   websecure:
     address: ":443"
-    asDefault: true
     http:
-      middlewares:
-        - crowdsec-waf@docker
       tls:
         certResolver: homeResolver
 
@@ -33,3 +30,5 @@ providers:
   docker:
     exposedByDefault: false
     network: secure-network
+  file:
+    directory: /etc/traefik/dynamic
