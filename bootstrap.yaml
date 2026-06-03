@@ -21,7 +21,7 @@
 
     - name: Install Docker, Compose and Ansible library
       ansible.builtin.apt:
-        name:
+        name: 
           - docker.io
           - docker-compose
           - python3-docker
@@ -39,6 +39,13 @@
         name: "{{ ansible_user_id }}"
         groups: docker
         append: true
+
+    - name: Reset connection to apply docker group permissions
+      ansible.builtin.meta: reset_connection
+
+    - name: Setup Core Infrastructure
+      ansible.builtin.include_role:
+        name: infra_core
 
     - name: Save Generated Passwords to Local File
       ansible.builtin.copy:

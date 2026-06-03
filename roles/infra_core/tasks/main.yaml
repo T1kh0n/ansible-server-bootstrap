@@ -4,11 +4,24 @@
     name: secure-network
     state: present
 
-- name: Ensure Traefik config directory exists
+- name: Ensure infrastructure directories exist
   ansible.builtin.file:
-    path: /opt/infra/traefik/config
+    path: "{{ item }}"
     state: directory
     mode: '0755'
+  loop:
+    - /opt/infra/traefik/config
+    - /opt/infra/traefik/letsencrypt
+    - /opt/infra/crowdsec/data
+    - /opt/infra/crowdsec/config
+
+- name: Ensure Traefik acme.json exists with correct permissions
+  ansible.builtin.file:
+    path: /opt/infra/traefik/letsencrypt/acme.json
+    state: touch
+    mode: '0600'
+    modification_time: preserve
+    access_time: preserve
 
 - name: Template Traefik configuration
   ansible.builtin.template:
@@ -39,6 +52,8 @@
             COLLECTIONS: "crowdsecurity/traefik"
           volumes:
             - /var/log:/var/log:ro
+            - /opt/infra/crowdsec/data:/var/lib/crowdsec/data
+            - /opt/infra/crowdsec/config:/etc/crowdsec
           networks:
             - secure-network
         oxker:
