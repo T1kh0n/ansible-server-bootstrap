@@ -10,11 +10,15 @@
       - mounts
       - devices
 
+- name: Check if storage directory is already mounted
+  ansible.builtin.set_fact:
+    storage_already_mounted: "{{ ansible_mounts | selectattr('mount', 'equalto', '/mnt/storage') | list | length > 0 }}"
+
 - name: Identify root disk from mounts
   ansible.builtin.set_fact:
     root_disk: "{{ item.device | regex_replace('[0-9]+$', '') | regex_replace('/dev/', '') }}"
   loop: "{{ ansible_mounts }}"
-  when: item.mount == "/"
+  when: item.mount == "/" and not storage_already_mounted
 
 - name: Find secondary data disk from available block devices
   ansible.builtin.set_fact:
@@ -26,11 +30,12 @@
         {% endif %}
       {% endfor %}
       {{ found.disk | trim }}
+  when: not storage_already_mounted
 
 - name: Fail if no secondary storage disk is found
   ansible.builtin.fail:
     msg: "Could not automatically detect a secondary data disk that is not the OS disk (Root disk detected as: /dev/{{ root_disk }})."
-  when: target_disk == ""
+  when: not storage_already_mounted and (target_disk is not defined or target_disk == "")
 
 - name: Create mount directory for custom storage
   ansible.builtin.file:
@@ -43,6 +48,7 @@
     fstype: ext4
     dev: "/dev/{{ target_disk }}"
     resizefs: yes
+  when: not storage_already_mounted
 
 - name: Mount and configure secondary data disk
   ansible.posix.mount:
@@ -51,6 +57,7 @@
     fstype: ext4
     opts: defaults,noatime
     state: mounted
+  when: not storage_already_mounted
 
 - name: Configure sysctl parameters for high load and database stability
   ansible.posix.sysctl:
