@@ -12,9 +12,9 @@
 
 - name: Identify root disk from mounts
   ansible.builtin.set_fact:
-    root_disk: "{{ item.device | regex_replace('[0-9]+$', '') | regex_replace('/dev/', '') }}"
+    root_disk: "{{ item.device | regex_search('(sd[a-z]|nvme[0-9]n[0-9]|vd[a-z])') }}"
   loop: "{{ ansible_mounts }}"
-  when: item.mount == "/"
+  when: item.mount == "/" and (item.device | regex_search('(sd[a-z]|nvme[0-9]n[0-9]|vd[a-z])') is not none)
 
 - name: Find secondary data disk from available block devices
   ansible.builtin.set_fact:
