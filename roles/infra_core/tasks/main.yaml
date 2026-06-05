@@ -63,6 +63,7 @@
           environment:
             COLLECTIONS: "crowdsecurity/traefik crowdsecurity/sshd"
             BOUNCER_KEY_traefik: "{{ crowdsec_bouncer_key }}"
+            LAPI_BEHAVIOR: "true"
           volumes:
             - /var/log:/var/log:ro
             - /opt/infra/crowdsec/data:/var/lib/crowdsec/data

@@ -1,19 +1,30 @@
 ---
-- name: Install firewalld
-  ansible.builtin.package:
-    name: firewalld
-    state: present
+- name: Allow incoming traffic on port 80 for HTTP
+  community.general.ufw:
+    rule: allow
+    port: '80'
+    proto: tcp
 
-- name: Start and enable firewalld service
-  ansible.builtin.service:
-    name: firewalld
-    state: started
-    enabled: true
+- name: Allow incoming traffic on port 443 for HTTPS
+  community.general.ufw:
+    rule: allow
+    port: '443'
+    proto: tcp
 
-- name: Enable masquerading for public zone
-  ansible.posix.firewalld:
-    zone: public
-    masquerade: true
+- name: Allow incoming traffic on port 8448 for Matrix Federation
+  community.general.ufw:
+    rule: allow
+    port: '8448'
+    proto: tcp
+
+- name: Allow incoming traffic for custom SSH port
+  community.general.ufw:
+    rule: allow
+    port: "{{ ssh_port | default('22') }}"
+    proto: tcp
+
+- name: Enable UFW firewall and set default deny policy
+  community.general.ufw:
     state: enabled
-    permanent: true
-    immediate: true
+    policy: deny
+    direction: incoming
