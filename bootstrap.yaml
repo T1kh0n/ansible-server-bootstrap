@@ -1,6 +1,6 @@
 ---
 - name: Bootstrap and Deploy Self-Hosted Portfolio Infrastructure
-  hosts: webservers
+  hosts: localhost, all
   become: true
 
   roles:
