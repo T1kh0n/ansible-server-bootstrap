@@ -3,7 +3,19 @@ experimental:
     bouncer:
       moduleName: github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin
 
+api:
+  dashboard: false
+  insecure: true
+
+metrics:
+  prometheus:
+    entryPoint: traefik
+    addEntryPointsLabels: true
+    addServicesLabels: true
+
 entryPoints:
+  traefik:
+    address: ":8080"
   web:
     address: ":80"
     http:

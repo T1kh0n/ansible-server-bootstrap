@@ -57,6 +57,12 @@
           environment:
             GF_SECURITY_ADMIN_PASSWORD: "{{ grafana_admin_password | default('admin_secure_pass') }}"
             GF_USERS_ALLOW_SIGN_UP: "false"
+            GF_DATABASE_TYPE: "postgres"
+            GF_DATABASE_HOST: "postgres:5432"
+            GF_DATABASE_NAME: "{{ db_name | default('portfolio') }}"
+            GF_DATABASE_USER: "{{ db_user | default('portfolio_user') }}"
+            GF_DATABASE_PASSWORD: "{{ db_password | default('secure_db_pass') }}"
+            GF_DATABASE_SSL_MODE: "disable"
           volumes:
             - /opt/infra/grafana/data:/var/lib/grafana
           deploy:
