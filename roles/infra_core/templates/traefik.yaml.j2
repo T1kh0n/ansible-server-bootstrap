@@ -1,8 +1,7 @@
 experimental:
-  plugins:
+  localPlugins:
     bouncer:
       moduleName: github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin
-      version: v1.6.0
 
 entryPoints:
   web:
@@ -14,6 +13,11 @@ entryPoints:
           scheme: https
   websecure:
     address: ":443"
+    http:
+      tls:
+        certResolver: homeResolver
+  matrix:
+    address: ":8448"
     http:
       tls:
         certResolver: homeResolver

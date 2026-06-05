@@ -2,8 +2,57 @@ http:
   middlewares:
     crowdsec-waf:
       plugin:
-        crowdsec:
+        bouncer:
+          enabled: true
+          crowdsecMode: live
           crowdsecLapiScheme: http
           crowdsecLapiHost: crowdsec:8080
-          crowdsecLapiKey: "GENERATED_CROWDSEC_LAPI_KEY_HERE"
+          crowdsecLapiKey: "{{ crowdsec_bouncer_key }}"
           clientTimeout: 2s
+
+  routers:
+    s3-router:
+      rule: "Host(`s3.{{ domain | default('yourdomain.com') }}`)"
+      entryPoints:
+        - websecure
+      service: seaweedfs-service
+      middlewares:
+        - crowdsec-waf
+
+    grafana-router:
+      rule: "Host(`grafana.{{ domain | default('yourdomain.com') }}`)"
+      entryPoints:
+        - websecure
+      service: grafana-service
+      middlewares:
+        - crowdsec-waf
+
+    matrix-client-router:
+      rule: "Host(`matrix.{{ domain | default('yourdomain.com') }}`)"
+      entryPoints:
+        - websecure
+      service: matrix-service
+      middlewares:
+        - crowdsec-waf
+
+    matrix-federation-router:
+      rule: "Host(`matrix.{{ domain | default('yourdomain.com') }}`)"
+      entryPoints:
+        - matrix
+      service: matrix-service
+      middlewares:
+        - crowdsec-waf
+
+  services:
+    seaweedfs-service:
+      loadBalancer:
+        servers:
+          - url: "http://seaweedfs:8333"
+    grafana-service:
+      loadBalancer:
+        servers:
+          - url: "http://grafana:3000"
+    matrix-service:
+      loadBalancer:
+        servers:
+          - url: "http://synapse:8008"

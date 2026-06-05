@@ -226,4 +226,4 @@ __marimo__/
 *.retry
 
 hosts.yaml
-script.sh
+*.sh

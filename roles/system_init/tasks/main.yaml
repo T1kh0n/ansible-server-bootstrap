@@ -1,58 +1,63 @@
 ---
-- name: Generate random passwords
-  ansible.builtin.set_fact:
-    root_password: "{{ lookup('password', '/dev/null length=20 chars=ascii_letters,digits') }}"
-    main_password: "{{ lookup('password', '/dev/null length=20 chars=ascii_letters,digits') }}"
-    sudo_password: "{{ lookup('password', '/dev/null length=20 chars=ascii_letters,digits') }}"
-
-- name: Create docker group
-  ansible.builtin.group:
-    name: docker
+- name: Ensure secure-network exists
+  community.docker.docker_network:
+    name: secure-network
     state: present
 
-- name: Create main user
-  ansible.builtin.user:
-    name: main
-    password: "{{ main_password | password_hash('sha512') }}"
-    groups: sudo,docker
-    append: true
-    shell: /bin/bash
-
-- name: Set root password
-  ansible.builtin.user:
-    name: root
-    password: "{{ root_password | password_hash('sha512') }}"
-
-- name: Disable sleep and hibernation (Crucial for Home Server)
-  ansible.builtin.systemd:
-    name: "{{ item }}"
-    masked: true
-  loop:
-    - sleep.target
-    - suspend.target
-    - hibernate.target
-    - hybrid-sleep.target
-
-- name: Ensure /mnt/storage exists
+- name: Create mount directory for custom storage
   ansible.builtin.file:
     path: /mnt/storage
     state: directory
     mode: '0755'
 
-- name: Schedule daily reboot at 04:00
-  ansible.builtin.cron:
-    name: "Daily auto-reboot"
-    minute: "0"
-    hour: "4"
-    job: "/sbin/reboot"
+- name: Mount and configure /dev/sdb drive
+  ansible.posix.mount:
+    path: /mnt/storage
+    src: /dev/sdb
+    fstype: ext4
+    opts: defaults,noatime
+    state: mounted
 
-- name: Configure SSH port and disable root login
-  ansible.builtin.lineinfile:
-    path: /etc/ssh/sshd_config
-    regexp: "{{ item.regexp }}"
-    line: "{{ item.line }}"
+- name: Configure sysctl parameters for high load and database stability
+  ansible.posix.sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    state: present
+    reload: true
   loop:
-    - { regexp: '^#?Port', line: 'Port 2222' }
-    - { regexp: '^#?PermitRootLogin', line: 'PermitRootLogin no' }
-    - { regexp: '^#?PasswordAuthentication', line: 'PasswordAuthentication no' }
-  notify: restart ssh
+    - { key: 'vm.overcommit_memory', value: '1' }
+    - { key: 'vm.max_map_count', value: '262144' }
+    - { key: 'fs.file-max', value: '2097152' }
+
+- name: Check if swap file exists
+  ansible.builtin.stat:
+    path: /swapfile
+  register: swap_file_check
+
+- name: Create swap file if it does not exist
+  block:
+    - name: Allocate space for swapfile
+      ansible.builtin.command: fallocate -l 4G /swapfile
+      changed_when: true
+
+    - name: Set correct permissions for swapfile
+      ansible.builtin.file:
+        path: /swapfile
+        mode: '0600'
+
+    - name: Make swapfile
+      ansible.builtin.command: mkswap /swapfile
+      changed_when: true
+
+    - name: Enable swapfile
+      ansible.builtin.command: swapon /swapfile
+      changed_when: true
+
+    - name: Add swapfile to fstab
+      ansible.builtin.mount:
+        path: none
+        src: /swapfile
+        fstype: swap
+        opts: sw
+        state: present
+  when: not swap_file_check.stat.exists

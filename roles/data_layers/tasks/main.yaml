@@ -1,0 +1,43 @@
+---
+- name: Ensure database directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - /opt/infra/postgres/data
+    - /opt/infra/redis/data
+
+- name: Deploy Databases Layer
+  community.docker.docker_compose_v2:
+    project_name: data_layers
+    definition:
+      services:
+        postgres:
+          image: postgres:16-alpine
+          environment:
+            POSTGRES_USER: "{{ db_user | default('portfolio_user') }}"
+            POSTGRES_PASSWORD: "{{ db_password | default('secure_db_pass') }}"
+            POSTGRES_DB: "{{ db_name | default('portfolio') }}"
+          volumes:
+            - /opt/infra/postgres/data:/var/lib/postgresql/data
+          deploy:
+            resources:
+              limits:
+                memory: 1G
+          networks:
+            - secure-network
+        redis:
+          image: redis:7-alpine
+          command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+          volumes:
+            - /opt/infra/redis/data:/data
+          deploy:
+            resources:
+              limits:
+                memory: 512M
+          networks:
+            - secure-network
+      networks:
+        secure-network:
+          external: true

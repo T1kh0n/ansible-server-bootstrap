@@ -1,0 +1,33 @@
+---
+- name: Ensure SeaweedFS metadata directory exists on root drive
+  ansible.builtin.file:
+    path: /opt/infra/seaweedfs/md
+    state: directory
+    mode: '0755'
+
+- name: Ensure SeaweedFS block storage directory exists on mounted drive
+  ansible.builtin.file:
+    path: /mnt/storage/seaweedfs/data
+    state: directory
+    mode: '0755'
+
+- name: Deploy Object Storage Layer
+  community.docker.docker_compose_v2:
+    project_name: object_storage
+    definition:
+      services:
+        seaweedfs:
+          image: chrislusf/seaweedfs:latest
+          command: 'server -dir=/data -volume.max=0 -master.volumeSizeLimitMB=30000 -s3 -s3.port=8333'
+          volumes:
+            - /opt/infra/seaweedfs/md:/data/metadata
+            - /mnt/storage/seaweedfs/data:/data
+          deploy:
+            resources:
+              limits:
+                memory: 512M
+          networks:
+            - secure-network
+      networks:
+        secure-network:
+          external: true

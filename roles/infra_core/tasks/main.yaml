@@ -1,10 +1,5 @@
 ---
-- name: Ensure secure-network exists
-  community.docker.docker_network:
-    name: secure-network
-    state: present
-
-- name: Ensure infrastructure directories exist
+- name: Ensure infra directories exist
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
@@ -13,8 +8,14 @@
     - /opt/infra/traefik/config
     - /opt/infra/traefik/letsencrypt
     - /opt/infra/traefik/dynamic
-    - /opt/infra/crowdsec/data
-    - /opt/infra/crowdsec/config
+    - /opt/infra/traefik/plugins-local/src/github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin
+
+- name: Download and unpack Traefik bouncer plugin locally
+  ansible.builtin.unarchive:
+    src: https://github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin/archive/refs/tags/v1.6.0.tar.gz
+    dest: /opt/infra/traefik/plugins-local/src/github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin
+    remote_src: yes
+    extra_opts: [--strip-components=1]
 
 - name: Ensure Traefik acme.json exists with correct permissions
   ansible.builtin.file:
@@ -24,10 +25,19 @@
     modification_time: preserve
     access_time: preserve
 
+- name: Generate or read CrowdSec Traefik Bouncer key
+  ansible.builtin.set_fact:
+    crowdsec_bouncer_key: "{{ lookup('password', playbook_dir + '/.crowdsec_bouncer.key length=32 chars=ascii_letters,digits') }}"
+
 - name: Template Traefik configuration
   ansible.builtin.template:
     src: traefik.yaml.j2
     dest: /opt/infra/traefik/config/traefik.yaml
+
+- name: Template Traefik dynamic routing configuration
+  ansible.builtin.template:
+    src: dynamic_waf.yaml.j2
+    dest: /opt/infra/traefik/dynamic/dynamic_waf.yaml
 
 - name: Deploy Core Infrastructure
   community.docker.docker_compose_v2:
@@ -39,29 +49,24 @@
           ports:
             - "80:80"
             - "443:443"
+            - "8448:8448"
           volumes:
             - /var/run/docker.sock:/var/run/docker.sock:ro
             - /opt/infra/traefik/config/traefik.yaml:/etc/traefik/traefik.yaml:ro
+            - /opt/infra/traefik/dynamic:/etc/traefik/dynamic:ro
+            - /opt/infra/traefik/plugins-local:/plugins-local
             - /opt/infra/traefik/letsencrypt:/letsencrypt
           networks:
             - secure-network
-          labels:
-            - "traefik.http.middlewares.crowdsec-waf.plugin.bouncer.enabled=true"
         crowdsec:
           image: crowdsecurity/crowdsec:latest
           environment:
-            COLLECTIONS: "crowdsecurity/traefik"
+            COLLECTIONS: "crowdsecurity/traefik crowdsecurity/sshd"
+            BOUNCER_KEY_traefik: "{{ crowdsec_bouncer_key }}"
           volumes:
             - /var/log:/var/log:ro
             - /opt/infra/crowdsec/data:/var/lib/crowdsec/data
             - /opt/infra/crowdsec/config:/etc/crowdsec
-          networks:
-            - secure-network
-        oxker:
-          image: ghcr.io/mrjackwills/oxker
-          tty: true
-          volumes:
-            - /var/run/docker.sock:/var/run/docker.sock:ro
           networks:
             - secure-network
       networks:

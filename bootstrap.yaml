@@ -1,68 +1,16 @@
 ---
-- name: Homelab Bootstrap (Static IP Setup)
-  hosts: homelab
+- name: Bootstrap and Deploy Self-Hosted Portfolio Infrastructure
+  hosts: webservers
   become: true
-  gather_facts: true
-  vars_files:
-    - vars/hardening.yaml
 
-  tasks:
-    - name: Install base packages
-      ansible.builtin.include_role:
-        name: base_packages
-
-    - name: Setup firewalld
-      ansible.builtin.include_role:
-        name: firewall
-
-    - name: System Initialization and Hardening
-      ansible.builtin.include_role:
-        name: system_init
-
-    - name: Install Docker, Compose and Ansible library
-      ansible.builtin.apt:
-        name: 
-          - docker.io
-          - docker-compose
-          - python3-docker
-        state: present
-        update_cache: true
-
-    - name: Ensure Docker service is running and enabled
-      ansible.builtin.systemd:
-        name: docker
-        state: started
-        enabled: true
-
-    - name: Add current deployment user to docker group
-      ansible.builtin.user:
-        name: "{{ ansible_user_id }}"
-        groups: docker
-        append: true
-
-    - name: Reset connection to apply docker group permissions
-      ansible.builtin.meta: reset_connection
-
-    - name: Setup Core Infrastructure
-      ansible.builtin.include_role:
-        name: infra_core
-
-    - name: Save Generated Passwords to Local File
-      ansible.builtin.copy:
-        dest: "./generated_passwords.txt"
-        content: |
-          =============================================
-          SYSTEM PASSWORDS GENERATED FOR HOME SERVER
-          =============================================
-          User: root | Pass: {{ hostvars[inventory_hostname]['root_password'] | default('NOT SET', true) }}
-          User: main | Pass: {{ hostvars[inventory_hostname]['main_password'] | default('NOT SET', true) }}
-          User: sudo | Pass: {{ hostvars[inventory_hostname]['sudo_password'] | default('NOT SET', true) }}
-          =============================================
-        mode: '0600'
-      delegate_to: localhost
-
-- name: Homelab specific actions
-  hosts: homelab
-  become: true
   roles:
-    - homelab
+    - system_init
+    - firewall
+    - base_packages
+    - autoupdates
+    - crowdsec
+    - infra_core
+    - data_layers
+    - object_storage
+    - monitoring
+    - application

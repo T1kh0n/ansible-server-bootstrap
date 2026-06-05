@@ -1,0 +1,4 @@
+---
+- name: Mock application deployment task
+  ansible.builtin.debug:
+    msg: "Application role triggered. Ready to pull FastAPI and Vue.js SSR images or code."
