@@ -4,16 +4,34 @@
     name: secure-network
     state: present
 
+- name: Get root device partition
+  ansible.builtin.command: findmnt -n -o SOURCE /
+  register: root_partition
+  changed_when: false
+
+- name: Determine root disk name
+  ansible.builtin.set_fact:
+    root_disk: "{{ root_partition.stdout | regex_replace('[0-9]+$', '') | regex_replace('/dev/', '') }}"
+
+- name: Get available block devices
+  ansible.builtin.set_fact:
+    target_disk: "{{ ansible_facts.devices.keys() | select('match', '^sd[a-z]$|^nvme[0-9]n[0-9]$') | reject('equalto', root_disk) | first | default('') }}"
+
+- name: Fail if no secondary storage disk is found
+  ansible.builtin.fail:
+    msg: "Could not automatically detect a secondary data disk that is not the OS disk."
+  when: target_disk == ""
+
 - name: Create mount directory for custom storage
   ansible.builtin.file:
     path: /mnt/storage
     state: directory
     mode: '0755'
 
-- name: Mount and configure /dev/sdb drive
+- name: Mount and configure secondary data disk
   ansible.posix.mount:
     path: /mnt/storage
-    src: /dev/sdb
+    src: "/dev/{{ target_disk }}"
     fstype: ext4
     opts: defaults,noatime
     state: mounted
