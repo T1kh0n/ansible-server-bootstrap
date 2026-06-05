@@ -1,5 +1,5 @@
 ---
-- name: Install gnupg and dependencies (Debian)
+- name: Install dependencies (Debian)
   ansible.builtin.apt:
     name:
       - gnupg
@@ -8,30 +8,15 @@
     update_cache: yes
   when: ansible_facts['os_family'] == 'Debian'
 
-- name: Create apt keyrings directory
-  ansible.builtin.file:
-    path: /etc/apt/keyrings
-    state: directory
-    mode: '0755'
-  when: ansible_facts['os_family'] == 'Debian'
-
-- name: Add GPG key for CrowdSec repository (Debian)
-  ansible.builtin.get_url:
-    url: https://packages.crowdsec.net/crowdsec.asc
-    dest: /etc/apt/keyrings/crowdsec.asc
-    mode: '0644'
-  when: ansible_facts['os_family'] == 'Debian'
-
-- name: Add CrowdSec repository (Debian)
-  ansible.builtin.apt_repository:
-    repo: "deb [signed-by=/etc/apt/keyrings/crowdsec.asc] https://packages.crowdsec.net/crowdsec/{{ ansible_facts['distribution'] | lower }} {{ ansible_facts['distribution_release'] }} main"
-    state: present
-    filename: crowdsec
-    update_cache: yes
+- name: Run CrowdSec official repository setup script (Debian)
+  ansible.builtin.shell: curl -s https://install.crowdsec.net | sudo bash
+  args:
+    creates: /etc/apt/sources.list.d/crowdsec_crowdsec.list
   when: ansible_facts['os_family'] == 'Debian'
 
 - name: Install CrowdSec security engine (Debian)
   ansible.builtin.apt:
     name: crowdsec
     state: present
+    update_cache: yes
   when: ansible_facts['os_family'] == 'Debian'
