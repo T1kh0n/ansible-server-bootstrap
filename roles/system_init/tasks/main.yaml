@@ -21,11 +21,11 @@
     target_disk: >-
       {% set found = namespace(disk='') %}
       {% for device in ansible_facts.devices.keys() %}
-        {% if device is match('^sd[a-z]$|^nvme[0-9]n[0-9]$') and device != root_disk %}
+        {% if device is match('^sd[a-z]$|^nvme[0-9]n[0-9]$|^vd[a-z]$') and device != root_disk %}
           {% set found.disk = device %}
         {% endif %}
       {% endfor %}
-      {{ found.disk }}
+      {{ found.disk | trim }}
 
 - name: Fail if no secondary storage disk is found
   ansible.builtin.fail:
@@ -37,6 +37,11 @@
     path: /mnt/storage
     state: directory
     mode: '0755'
+
+- name: Create filesystem on secondary disk if it does not exist
+  community.general.filesystem:
+    fstype: ext4
+    dev: "/dev/{{ target_disk }}"
 
 - name: Mount and configure secondary data disk
   ansible.posix.mount:
