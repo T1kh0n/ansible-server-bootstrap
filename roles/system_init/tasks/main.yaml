@@ -4,22 +4,32 @@
     name: secure-network
     state: present
 
-- name: Get root device partition
-  ansible.builtin.command: findmnt -n -o SOURCE /
-  register: root_partition
-  changed_when: false
+- name: Get mount points information
+  ansible.builtin.setup:
+    gather_subset:
+      - mounts
+      - devices
 
-- name: Determine root disk name
+- name: Identify root disk from mounts
   ansible.builtin.set_fact:
-    root_disk: "{{ root_partition.stdout | regex_replace('[0-9]+$', '') | regex_replace('/dev/', '') }}"
+    root_disk: "{{ item.device | regex_replace('[0-9]+$', '') | regex_replace('/dev/', '') }}"
+  loop: "{{ ansible_mounts }}"
+  when: item.mount == "/"
 
-- name: Get available block devices
+- name: Find secondary data disk from available block devices
   ansible.builtin.set_fact:
-    target_disk: "{{ ansible_facts.devices.keys() | select('match', '^sd[a-z]$|^nvme[0-9]n[0-9]$') | reject('equalto', root_disk) | first | default('') }}"
+    target_disk: >-
+      {% set found = namespace(disk='') %}
+      {% for device in ansible_facts.devices.keys() %}
+        {% if device is match('^sd[a-z]$|^nvme[0-9]n[0-9]$') and device != root_disk %}
+          {% set found.disk = device %}
+        {% endif %}
+      {% endfor %}
+      {{ found.disk }}
 
 - name: Fail if no secondary storage disk is found
   ansible.builtin.fail:
-    msg: "Could not automatically detect a secondary data disk that is not the OS disk."
+    msg: "Could not automatically detect a secondary data disk that is not the OS disk (Root disk detected as: /dev/{{ root_disk }})."
   when: target_disk == ""
 
 - name: Create mount directory for custom storage
