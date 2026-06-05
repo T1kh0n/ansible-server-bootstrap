@@ -4,22 +4,32 @@
     name: secure-network
     state: present
 
-- name: Collect device facts
+- name: Get mount points information
   ansible.builtin.setup:
     gather_subset:
+      - mounts
       - devices
 
-- name: Identify root device
+- name: Identify root disk from mounts
   ansible.builtin.set_fact:
-    root_dev: "{{ ansible_mounts | selectattr('mount', 'equalto', '/') | map(attribute='device') | first | regex_replace('[0-9]+$', '') | basename }}"
+    root_disk: "{{ item.device | regex_replace('[0-9]+$', '') | regex_replace('/dev/', '') }}"
+  loop: "{{ ansible_mounts }}"
+  when: item.mount == "/"
 
-- name: Find secondary data disk
+- name: Find secondary data disk from available block devices
   ansible.builtin.set_fact:
-    target_disk: "{{ ansible_facts.devices.keys() | select('match', '^(sd|vd|nvme)[a-z0-9]+$') | reject('equalto', root_dev) | first | default('') }}"
+    target_disk: >-
+      {% set found = namespace(disk='') %}
+      {% for device in ansible_facts.devices.keys() %}
+        {% if device is match('^sd[a-z]$|^nvme[0-9]n[0-9]$|^vd[a-z]$') and device != root_disk %}
+          {% set found.disk = device %}
+        {% endif %}
+      {% endfor %}
+      {{ found.disk | trim }}
 
 - name: Fail if no secondary storage disk is found
   ansible.builtin.fail:
-    msg: "Не удалось обнаружить свободный диск. Корень найден на: {{ root_dev }}. Доступные устройства: {{ ansible_facts.devices.keys() | list }}"
+    msg: "Could not automatically detect a secondary data disk that is not the OS disk (Root disk detected as: /dev/{{ root_disk }})."
   when: target_disk == ""
 
 - name: Create mount directory for custom storage
@@ -85,4 +95,3 @@
         opts: sw
         state: present
   when: not swap_file_check.stat.exists
-
