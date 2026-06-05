@@ -1,0 +1,5 @@
+---
+s3_root_user: "seaweedfs_admin"
+s3_root_password: "SuperSecureStorageKey99"
+s3_bucket_media: "media"
+s3_bucket_resumes: "resumes"

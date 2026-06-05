@@ -1,0 +1,5 @@
+---
+db_user: "portfolio_user"
+db_password: "GeneratedSecurePassword123"
+db_name: "portfolio"
+redis_maxmemory: "256mb"

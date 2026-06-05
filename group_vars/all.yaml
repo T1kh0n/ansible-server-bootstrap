@@ -1,0 +1,4 @@
+---
+domain: "domain.com"
+acme_email: "email@example.com"
+ssh_port: "2222"
