@@ -1,4 +1,11 @@
 ---
+- name: Install ufw package
+  ansible.builtin.apt:
+    name: ufw
+    state: present
+    update_cache: yes
+  when: ansible_facts['os_family'] == 'Debian'
+
 - name: Allow incoming traffic on port 80 for HTTP
   community.general.ufw:
     rule: allow
