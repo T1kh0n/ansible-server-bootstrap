@@ -10,6 +10,11 @@ http:
           crowdsecLapiKey: "{{ crowdsec_bouncer_key }}"
           clientTimeout: 2s
 
+    grafana-auth:
+      basicAuth:
+        users:
+          - "admin:\$apr1\$7b6o7v9b\$HRLM8p1pYwU8SShSFAgD//"
+
   routers:
     s3-router:
       rule: "Host(`s3.{{ domain }}`)"
@@ -26,6 +31,7 @@ http:
       service: grafana-service
       middlewares:
         - crowdsec-waf
+        - grafana-auth
 
     matrix-client-router:
       rule: "Host(`matrix.{{ domain }}`)"

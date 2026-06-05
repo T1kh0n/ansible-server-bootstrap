@@ -29,7 +29,7 @@
           deploy:
             resources:
               limits:
-                memory: 512M
+                memory: 64M
           networks:
             - secure-network
         vmagent:
@@ -39,6 +39,10 @@
             - "--remoteWrite.url=http://vmsingle:8428/api/v1/write"
           volumes:
             - /opt/infra/vmagent/config/vmagent.yaml:/config/vmagent.yaml
+          deploy:
+            resources:
+              limits:
+                memory: 32M
           networks:
             - secure-network
         grafana:
@@ -51,7 +55,7 @@
           deploy:
             resources:
               limits:
-                memory: 512M
+                memory: 128M
           networks:
             - secure-network
       networks:
