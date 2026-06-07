@@ -31,6 +31,7 @@
       datasources:
         - name: VictoriaMetrics
           type: prometheus
+          uid: victoriametrics
           access: proxy
           url: http://vmsingle:8428
           isDefault: true
@@ -59,12 +60,24 @@
     url: "https://grafana.com/api/dashboards/11176/revisions/1/download"
     dest: /opt/infra/grafana/dashboards/victoriametrics.json
     mode: '0644'
+    force: yes
 
 - name: Download Traefik dashboard
   ansible.builtin.get_url:
     url: "https://grafana.com/api/dashboards/11462/revisions/1/download"
     dest: /opt/infra/grafana/dashboards/traefik.json
     mode: '0644'
+    force: yes
+
+- name: Fix datasource variables in JSON dashboards
+  ansible.builtin.replace:
+    path: "/opt/infra/grafana/dashboards/{{ item }}"
+    regexp: '\$\{DS_[A-Z0-9_]+\}'
+    replace: 'victoriametrics'
+  loop:
+    - victoriametrics.json
+    - traefik.json
+  notify: Restart Grafana
 
 - name: Deploy Monitoring Stack
   community.docker.docker_compose_v2:
