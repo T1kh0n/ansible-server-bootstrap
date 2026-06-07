@@ -63,7 +63,7 @@
 
 - name: Download VictoriaMetrics dashboard
   ansible.builtin.get_url:
-    url: "https://grafana.com/api/dashboards/11176/revisions/{{ vm_revisions.json[0].revision }}/download"
+    url: "https://grafana.com/api/dashboards/11176/revisions/{{ vm_revisions.json.items[0].revision }}/download"
     dest: /opt/infra/grafana/dashboards/victoriametrics.json
     mode: '0644'
 
@@ -75,7 +75,7 @@
 
 - name: Download Traefik dashboard
   ansible.builtin.get_url:
-    url: "https://grafana.com/api/dashboards/11462/revisions/{{ traefik_revisions.json[0].revision }}/download"
+    url: "https://grafana.com/api/dashboards/11462/revisions/{{ traefik_revisions.json.items[0].revision }}/download"
     dest: /opt/infra/grafana/dashboards/traefik.json
     mode: '0644'
 
