@@ -7,6 +7,9 @@
   loop:
     - /opt/infra/victoriametrics/data
     - /opt/infra/vmagent/config
+    - /opt/infra/grafana/provisioning/datasources
+    - /opt/infra/grafana/provisioning/dashboards
+    - /opt/infra/grafana/dashboards
 
 - name: Ensure Grafana data directory exists with correct permissions
   ansible.builtin.file:
@@ -20,6 +23,49 @@
   ansible.builtin.template:
     src: vmagent.yaml.j2
     dest: /opt/infra/vmagent/config/vmagent.yaml
+
+- name: Setup Grafana provisioning datasources
+  ansible.builtin.copy:
+    dest: /opt/infra/grafana/provisioning/datasources/datasource.yaml
+    content: |
+      apiVersion: 1
+      datasources:
+        - name: VictoriaMetrics
+          type: prometheus
+          access: proxy
+          url: http://vmsingle:8428
+          isDefault: true
+          editable: false
+    mode: '0644'
+
+- name: Setup Grafana provisioning dashboards config
+  ansible.builtin.copy:
+    dest: /opt/infra/grafana/provisioning/dashboards/dashboard.yaml
+    content: |
+      apiVersion: 1
+      providers:
+        - name: 'Default'
+          orgId: 1
+          folder: ''
+          type: file
+          disableDeletion: false
+          editable: true
+          updateIntervalSeconds: 10
+          options:
+            path: /etc/grafana/dashboards
+    mode: '0644'
+
+- name: Download VictoriaMetrics dashboard
+  ansible.builtin.get_url:
+    url: https://raw.githubusercontent.com/VictoriaMetrics/VictoriaMetrics/master/dashboards/victoriametrics-single.json
+    dest: /opt/infra/grafana/dashboards/victoriametrics.json
+    mode: '0644'
+
+- name: Download Traefik dashboard
+  ansible.builtin.get_url:
+    url: https://raw.githubusercontent.com/traefik/traefik/v3.0/contrib/grafana/dashboards/traefik.json
+    dest: /opt/infra/grafana/dashboards/traefik.json
+    mode: '0644'
 
 - name: Deploy Monitoring Stack
   community.docker.docker_compose_v2:
@@ -61,7 +107,6 @@
           environment:
             GF_SECURITY_ADMIN_USER: "admin"
             GF_SECURITY_ADMIN_PASSWORD: "{{ grafana_admin_password | default('admin_secure_pass') }}"
-            GF_USERS_ALLOW_SIGN_UP: "false"
             GF_DATABASE_TYPE: "postgres"
             GF_DATABASE_HOST: "postgres:5432"
             GF_DATABASE_NAME: "{{ db_name | default('portfolio') }}"
@@ -70,6 +115,8 @@
             GF_DATABASE_SSL_MODE: "disable"
           volumes:
             - /opt/infra/grafana/data:/var/lib/grafana
+            - /opt/infra/grafana/provisioning:/etc/grafana/provisioning
+            - /opt/infra/grafana/dashboards:/etc/grafana/dashboards
           ports:
             - "127.0.0.1:3000:3000"
           deploy:

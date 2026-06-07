@@ -1,5 +1,5 @@
 ---
-- name: Ensure database directories exist
+- name: Ensure DB data directories exist
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
@@ -8,7 +8,7 @@
     - /opt/infra/postgres/data
     - /opt/infra/redis/data
 
-- name: Deploy Databases Layer
+- name: Deploy Data Layers Stack
   community.docker.docker_compose_v2:
     project_name: data_layers
     definition:
@@ -24,12 +24,12 @@
           deploy:
             resources:
               limits:
-                memory: 512M
+                memory: 256M
           networks:
             - secure-network
         redis:
           image: redis:7-alpine
-          command: redis-server --appendonly yes --maxmemory 100mb --maxmemory-policy allkeys-lru
+          command: redis-server --appendonly yes
           volumes:
             - /opt/infra/redis/data:/data
           deploy:
@@ -41,3 +41,20 @@
       networks:
         secure-network:
           external: true
+
+- name: Wait for PostgreSQL to be ready
+  community.docker.docker_container_exec:
+    container: data_layers-postgres-1
+    command: pg_isready -U {{ db_user | default('portfolio_user') }} -d {{ db_name | default('portfolio') }}
+  register: pg_check
+  until: pg_check.rc == 0
+  retries: 10
+  delay: 3
+
+- name: Force update Grafana admin password in PostgreSQL
+  community.docker.docker_container_exec:
+    container: data_layers-postgres-1
+    command: >
+      psql -U {{ db_user | default('portfolio_user') }} -d {{ db_name | default('portfolio') }} -c
+      "UPDATE usr SET password = '{{ grafana_admin_password | default('admin_secure_pass') | ansible.builtin.password_hash('blowfish') }}' WHERE login = 'admin';"
+  failed_when: false
