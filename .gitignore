@@ -227,3 +227,6 @@ __marimo__/
 
 hosts.yaml
 *.sh
+
+group_vars/*.yaml
+!group_vars/*.yaml.example
