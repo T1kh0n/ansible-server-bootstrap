@@ -77,7 +77,6 @@
   loop:
     - victoriametrics.json
     - traefik.json
-  notify: Restart Grafana
 
 - name: Deploy Monitoring Stack
   community.docker.docker_compose_v2:
