@@ -1,4 +1,3 @@
----
 - name: Ensure monitoring directories exist (root owned)
   ansible.builtin.file:
     path: "{{ item }}"
@@ -55,27 +54,15 @@
             path: /etc/grafana/dashboards
     mode: '0644'
 
-- name: Get latest revision of VictoriaMetrics dashboard
-  ansible.builtin.uri:
-    url: https://grafana.com/api/dashboards/11176/revisions
-    return_content: true
-  register: vm_revisions
-
 - name: Download VictoriaMetrics dashboard
   ansible.builtin.get_url:
-    url: "https://grafana.com/api/dashboards/11176/revisions/{{ vm_revisions.json.items[0].revision }}/download"
+    url: "https://grafana.com/api/dashboards/11176/revisions/1/download"
     dest: /opt/infra/grafana/dashboards/victoriametrics.json
     mode: '0644'
 
-- name: Get latest revision of Traefik dashboard
-  ansible.builtin.uri:
-    url: https://grafana.com/api/dashboards/11462/revisions
-    return_content: true
-  register: traefik_revisions
-
 - name: Download Traefik dashboard
   ansible.builtin.get_url:
-    url: "https://grafana.com/api/dashboards/11462/revisions/{{ traefik_revisions.json.items[0].revision }}/download"
+    url: "https://grafana.com/api/dashboards/11462/revisions/2/download"
     dest: /opt/infra/grafana/dashboards/traefik.json
     mode: '0644'
 
