@@ -59,6 +59,7 @@
         grafana:
           image: grafana/grafana-oss:latest
           environment:
+            GF_SECURITY_ADMIN_USER: "admin"
             GF_SECURITY_ADMIN_PASSWORD: "{{ grafana_admin_password | default('admin_secure_pass') }}"
             GF_USERS_ALLOW_SIGN_UP: "false"
             GF_DATABASE_TYPE: "postgres"
@@ -74,7 +75,7 @@
           deploy:
             resources:
               limits:
-                memory: 128M
+                memory: 512M
           networks:
             - secure-network
       networks:
